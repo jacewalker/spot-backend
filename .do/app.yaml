@@ -1,0 +1,19 @@
+name: spot-backend
+region: sfo
+services:
+  - name: api
+    github:
+      repo: jacewalker/spot-backend
+      branch: main
+      deploy_on_push: true
+    build_command: npm ci && npm run build
+    run_command: npm start
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    envs:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        scope: RUN_TIME
+        type: SECRET
