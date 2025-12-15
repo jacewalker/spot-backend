@@ -471,6 +471,50 @@ app.patch('/api/users/me', authenticate, (req: AuthRequest, res: Response) => {
   res.json(getUserResponse(user));
 });
 
+app.delete('/api/users/me', authenticate, (req: AuthRequest, res: Response) => {
+  const user = users.get(req.user!.id);
+  if (!user) {
+    return res.status(404).json({ message: 'User not found' });
+  }
+
+  const userId = req.user!.id;
+
+  // Delete all user's workouts
+  const userWorkoutIds: string[] = [];
+  for (const [workoutId, workout] of workouts.entries()) {
+    if (workout.user_id === userId) {
+      userWorkoutIds.push(workoutId);
+    }
+  }
+  userWorkoutIds.forEach(id => {
+    workouts.delete(id);
+    likes.delete(id); // Delete all likes on this workout
+  });
+
+  // Remove user from all follows (as follower)
+  follows.delete(userId);
+
+  // Remove user from all following lists (as followee)
+  for (const followSet of follows.values()) {
+    followSet.delete(userId);
+  }
+
+  // Remove user from likes
+  for (const likeSet of likes.values()) {
+    likeSet.delete(userId);
+  }
+
+  // Remove Apple user mapping if exists
+  if (user.apple_user_id) {
+    appleUsers.delete(user.apple_user_id);
+  }
+
+  // Finally, delete the user
+  users.delete(userId);
+
+  res.status(204).send();
+});
+
 app.get('/api/users/:id', authenticate, (req: AuthRequest, res: Response) => {
   const user = users.get(req.params.id);
   if (!user) {
@@ -592,6 +636,7 @@ app.listen(PORT, () => {
 ║   POST   /api/workouts                                     ║
 ║   GET    /api/workouts/:id                                 ║
 ║   GET    /api/users/me                                     ║
+║   DELETE /api/users/me                                     ║
 ║   GET    /api/segments/near                                ║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
